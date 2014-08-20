@@ -1,0 +1,24 @@
+users:
+    alice:
+        api_keys: ['alice:k']
+        roles: [foo, all]
+    bob:
+        api_keys: ['bob:k']
+        roles: [foo, bar, all]
+    charlie:
+        api_keys: ['charlie:k']
+        roles: [all]
+
+clients:
+    Client:
+        scopes: [openid, resource]
+        client_id: 'client:ci'
+        client_secret: 'client:cs'
+        grant_type: authorization_code
+        response_type: code
+    User:
+        scopes: [client, openid]
+        client_id: 'user:ci'
+        requires_validation: false
+        grant_type: implicit
+        response_type: 'id_token token'

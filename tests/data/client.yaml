@@ -1,0 +1,4 @@
+resources:
+    buz:
+        data: some data that lives on the client
+        allowed_roles: [all]

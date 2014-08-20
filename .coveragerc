@@ -1,0 +1,7 @@
+[run]
+branch = True
+parallel = True
+source = s_auth,s_client,s_resource,s_user,s_common
+
+[report]
+show_missing = True

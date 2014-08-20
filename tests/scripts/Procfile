@@ -1,0 +1,3 @@
+auth: tests/scripts/sigterm_wrapper coverage run s_auth/wsgi.py --data tests/data/auth.yaml
+resource: tests/scripts/sigterm_wrapper coverage run s_resource/wsgi.py --data tests/data/resource.yaml
+client: tests/scripts/sigterm_wrapper coverage run s_client/wsgi.py --data tests/data/client.yaml

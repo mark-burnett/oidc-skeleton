@@ -1,0 +1,8 @@
+flask
+-e git+https://github.com/mark-burnett/jot.git#egg=jot
+oauthlib
+pyyaml
+requests
+requests-oauthlib
+simplejson
+sqlalchemy
