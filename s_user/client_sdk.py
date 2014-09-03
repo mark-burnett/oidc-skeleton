@@ -1,6 +1,5 @@
 from oauthlib.oauth2 import MobileApplicationClient
 from .clients import OIDCMobileApplicationClient
-from requests_oauthlib import OAuth2Session
 from s_common.auth import auth_url
 import os
 import requests
@@ -22,22 +21,23 @@ class ClientSDK(object):
             if second_response.status_code == 200:
                 return second_response.json()
 
-    def get_direct_resource(self, name):
-        url = self._client_url('direct-resource', name)
-        oauth_session = OAuth2Session(redirect_uri=url,
-                scope=['client', 'openid'],
-                client=OIDCMobileApplicationClient(client_id='user:ci'))
-
+    @property
+    def headers_for_direct_resource(self):
         headers = {}
         if self.token:
             headers['Identity'] = self.token['id_token']
+            headers['Authorization'] = 'Bearer %s' % self.token['access_token']
+        return headers
 
-        response = oauth_session.get(url, headers=headers)
+    def get_direct_resource(self, name):
+        url = self._client_url('direct-resource', name)
+        client = OIDCMobileApplicationClient(client_id='user:ci')
+
+        response = requests.get(url, headers=self.headers_for_direct_resource)
         if response.status_code == 401:
-            self.token = self._implicit_authenticate(oauth_session)
+            self.token = self._implicit_authenticate(client, url)
 
-            second_response = oauth_session.get(url, headers={'Identity':
-                self.token['id_token']})
+            second_response = requests.get(url, headers=self.headers_for_direct_resource)
 
             if second_response.status_code == 200:
                 return second_response.json()
@@ -49,13 +49,19 @@ class ClientSDK(object):
     def _client_url(self, *path):
         return os.path.join(os.environ['CLIENT_URL'], *path)
 
-    def _implicit_authenticate(self, oauth_session):
-        authorization_url, state = oauth_session.authorization_url(auth_url('authorize'))
+    def _implicit_authenticate(self, client, url):
+        scope = ['client', 'openid']
+        state = None
+        authorization_url = client.prepare_request_uri(auth_url('authorize'),
+                redirect_uri=url, scope=scope, state=state)
+
         authorization_response = requests.post(authorization_url,
                 headers={'Authorization': 'API Key ' + self.api_key},
                 allow_redirects=False)
+
         if not authorization_response.status_code == 302:
             raise RuntimeError('Failed to authenticate with API key')
 
-        return oauth_session.token_from_fragment(
-                authorization_response.headers['Location'])
+        return client.parse_request_uri_response(
+                authorization_response.headers['Location'],
+                scope=scope, state=state)
