@@ -2,7 +2,6 @@ from . import backend
 from . import models
 from flask import jsonify, redirect, request
 from flask.views import MethodView
-from .oauthlib_clients import OIDCMobileApplicationClient
 from requests_oauthlib import OAuth2Session
 from s_common.auth import auth_url
 from s_common.validate import validate_request_roles
@@ -14,28 +13,20 @@ import requests
 
 class DirectResourceView(MethodView):
     def get(self, name):
-        if 'Authorization' in request.headers:
-            s = backend.Session()
+        if not request_is_authenticated():
+            return '', 401
 
-            resource = s.query(models.Resource).get(name)
-            signed_id_token = jot.deserialize(str(request.headers['Identity']))
-            if resource and validate_request_roles(scopes='client',
-                    allowed_roles=resource.allowed_roles,
-                    signed_id_token=signed_id_token):
-                return jsonify(resource.as_dict), 200
+        s = backend.Session()
 
-            else:
-                return '', 403
+        resource = s.query(models.Resource).get(name)
+        signed_id_token = jot.deserialize(str(request.headers['Identity']))
+        if resource and validate_request_roles(scopes='client',
+                allowed_roles=resource.allowed_roles,
+                signed_id_token=signed_id_token):
+            return jsonify(resource.as_dict), 200
 
         else:
-            oauth_session = OAuth2Session(redirect_uri=request.url,
-                client=OIDCMobileApplicationClient(
-                    client_id=os.environ['USER_CLIENT_ID']),
-                scope=['client', 'openid'])
-            authorization_url, state = oauth_session.authorization_url(
-                    auth_url('authorize'))
-
-            return redirect(authorization_url)
+            return '', 403
 
 
 class ForwardedResourceView(MethodView):
@@ -61,6 +52,10 @@ class ForwardedResourceView(MethodView):
 
     def forward_url(self, name):
         return '%s/resource/%s' % (os.environ['RESOURCE_URL'], name)
+
+def request_is_authenticated():
+    return 'Authorization' in request.headers
+
 
 
 app = flask.Flask('Client')
